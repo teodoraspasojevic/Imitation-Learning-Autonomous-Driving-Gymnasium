@@ -862,7 +862,8 @@ if __name__ == "__main__":
                 image_path = os.path.join(images_dir, image_filename)
                 Image.fromarray(image_data).save(image_path)
 
-                # Log the image label in the csv file, as one-hot encoded vector.
+                # Log the image label in the csv file, as one-hot encoded vector. Label are the taken commands
+                #  in the simulator.
 
                 csv_writer.writerow([timestamp, image_filename, str(a)])
                 csv_file.flush()
