@@ -11,32 +11,34 @@ import re
 
 
 class RandomVerticalFlipWithLabel:
-    """Randomly vertically flips an image with its label.
+    """Randomly vertically flips an image with its label."""
 
-    Args:
-            img (PIL.Image): The image to be transformed.
-            label: The label associated with the image.
-
-    Returns:
-        Tuple: The (possibly) vertically flipped image and its label.
-    """
     def __call__(self, img, label):
+        """
+        Args:
+                img (PIL.Image): The image to be transformed.
+                label: The label associated with the image.
+
+        Returns:
+            Tuple: The (possibly) vertically flipped image and its label.
+        """
         if random.random() > 0.5:
             img = transforms.functional.vflip(img)
         return img, label
 
 
 class RandomHorizontalFlipWithLabel:
-    """Randomly horizontally flips an image with accordingly flipped label.
+    """Randomly horizontally flips an image with accordingly flipped label."""
 
-    Args:
-            img (PIL.Image): The image to be transformed.
-            label: The label associated with the image.
-
-    Returns:
-        Tuple: The (possibly) horizontally flipped image and its (possibly reversed) label.
-    """
     def __call__(self, img, label):
+        """
+        Args:
+                img (PIL.Image): The image to be transformed.
+                label: The label associated with the image.
+
+        Returns:
+            Tuple: The (possibly) horizontally flipped image and its (possibly reversed) label.
+        """
         if random.random() > 0.5:
             img = transforms.functional.hflip(img)
             label = label[::-1]
@@ -46,17 +48,22 @@ class RandomHorizontalFlipWithLabel:
 class ChangeStreetColor:
     """Transforms grey areas in the image to brown.
 
-    Args:
-            img (PIL.Image): The image to be transformed.
-            label: The label associated with the image.
-
-    Returns:
-        Tuple: The transformed image and its label.
+    Attributes:
+        brown_colour(tuple): RGB values of brown color to be set.
     """
+
     def __init__(self):
         self.brown_color = (139, 69, 19)
 
     def __call__(self, image, label):
+        """
+        Args:
+                image (PIL.Image): The image to be transformed.
+                label: The label associated with the image.
+
+        Returns:
+            Tuple: The transformed image and its label.
+        """
         image_np = np.array(image)
 
         # Define the grey color range.
@@ -75,62 +82,53 @@ class ChangeStreetColor:
 
 
 class ToTensorWithLabel:
-    """Converts an image to a tensor.
+    """Converts an image to a tensor."""
 
-    Args:
-            img (PIL.Image): The image to be transformed.
-            label: The label associated with the image.
-
-    Returns:
-        Tuple: The image tensor and its label.
-    """
     def __call__(self, image, label):
+        """
+        Args:
+                img (PIL.Image): The image to be transformed.
+                label: The label associated with the image.
+
+        Returns:
+        """
         image = transforms.ToTensor()(image)
         return image, label
 
 
 class ComposeTransformations:
-    """Applies the composed transformations to the image and its label.
+    """Applies the composed transformations to the image and its label."""
 
-    Args:
-            transformations (list): List of transformations to be composed.
-
-    Returns:
-        Tuple: The transformed image and its label.
-    """
     def __init__(self, transformations):
+        """
+        Args:
+                transformations (list): List of transformations to be composed.
+        """
         self.transformations = transformations
 
     def __call__(self, image, label):
+        """
+        Args:
+                img (PIL.Image): The image to be transformed.
+                label: The label associated with the image.
+
+        Returns:
+            Tuple: The transformed image and its label.
+        """
         for transform in self.transformations:
             image, label = transform(image, label)
         return image, label
 
 
-def visualize(dataset):
-    # Visualize images from the dataset with labels.
-
-    indices = np.random.choice(len(dataset), 30, replace=False)
-    samples = [dataset[i] for i in indices]
-
-    fig, axes = plt.subplots(5, 6, figsize=(15, 10))
-    axes = axes.flatten()
-
-    for ax, (img, label) in zip(axes, samples):
-        ax.imshow(img)
-        ax.set_title(label)
-        ax.axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-
 class CarDataset(Dataset):
     """Custom dataset for loading car images and their labels.
-
-    Args:
+    
+    Attributes:
         root (str): Root directory of the dataset.
-        transform (callable, optional): Optional transformations to be applied on a sample.
+        images_path (str): Path to the directory containing images.
+        label_path (str): Path to the CSV file containing labels.
+        labels (pd.DataFrame): DataFrame containing image filenames and their corresponding labels.
+        transform (callable, optional): Optional transform to be applied on a sample.
     """
 
     def __init__(self, root, transform=None):
@@ -154,11 +152,32 @@ class CarDataset(Dataset):
 
         return image, label
 
+    def visualize(self, num_samples=30):
+        """Visualizes batch of images from the dataset with their labels.
+
+        Args:
+            num_samples(int): number of images to be visualized.
+
+        """
+        indices = np.random.choice(len(self), num_samples, replace=False)
+        samples = [self[i] for i in indices]
+
+        fig, axes = plt.subplots(5, 6, figsize=(15, 10))
+        axes = axes.flatten()
+
+        for ax, (img, label) in zip(axes, samples):
+            ax.imshow(img)
+            ax.set_title(label)
+            ax.axis('off')
+
+        plt.tight_layout()
+        plt.show()
+
 
 if __name__ == '__main__':
     # Visualize original dataset.
     car_dataset = CarDataset(root='../../data', transform=None)
-    visualize(car_dataset)
+    car_dataset.visualize()
 
     # Visualize augmented dataset.
     augment1 = RandomHorizontalFlipWithLabel()
@@ -174,4 +193,4 @@ if __name__ == '__main__':
     ])
 
     car_dataset_augmented = CarDataset(root='../../data', transform=augmentations)
-    visualize(car_dataset_augmented)
+    car_dataset_augmented.visualize()
