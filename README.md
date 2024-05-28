@@ -23,7 +23,7 @@ README.md: This file, providing an overview and guidance on the repository.
 
 ## Getting Started ##
 
-Prerequisites:
+Prerequisites:  
 Python 3.7+  
 Gymnasium  
 PyTorch  
