@@ -1,13 +1,13 @@
 import os
 import numpy as np
 import pandas as pd
-import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL import Image
 import matplotlib.pyplot as plt
 import random
 import re
+import ast
 
 
 class RandomVerticalFlipWithLabel:
@@ -20,10 +20,16 @@ class RandomVerticalFlipWithLabel:
                 label: The label associated with the image.
 
         Returns:
-            Tuple: The (possibly) vertically flipped image and its label.
+            Tuple: The (possibly) vertically flipped image and its (possibly reversed) label.
         """
         if random.random() > 0.5:
             img = transforms.functional.vflip(img)
+            # Convert command from to left to, to right.
+            if label[2] == 1:
+                label[2], label[3] = 0, 1
+            # Convert command from to right to, to left.
+            if label[3] == 1:
+                label[2], label[3] = 1, 0
         return img, label
 
 
@@ -37,11 +43,10 @@ class RandomHorizontalFlipWithLabel:
                 label: The label associated with the image.
 
         Returns:
-            Tuple: The (possibly) horizontally flipped image and its (possibly reversed) label.
+            Tuple: The (possibly) horizontally flipped image and its label.
         """
         if random.random() > 0.5:
             img = transforms.functional.hflip(img)
-            label = label[::-1]
         return img, label
 
 
@@ -172,6 +177,49 @@ class CarDataset(Dataset):
 
         plt.tight_layout()
         plt.show()
+
+
+def safe_eval_list(row):
+    try:
+        return ast.literal_eval(row)
+    except (ValueError, SyntaxError):
+        # Handle the case where the list format is incorrect
+        row = row.replace('.', ',')
+        return ast.literal_eval(row)
+
+
+def transform_row(row):
+    # Initialize the new array with zeros
+    new_array = [0, 0, 0, 0, 0]
+
+    # Apply the given conditions
+    if row[0] == -1:
+        new_array[2] = 1
+    if row[0] == 1:
+        new_array[3] = 1
+    if row[1] == 1:
+        new_array[0] = 1
+    if row[2] == 0.8:
+        new_array[1] = 1
+    if all(element == 0 for element in row):
+        new_array[4] = 1
+
+    return new_array
+
+
+def modify_labels():
+    file_path = '../../data/data_log.csv'
+    df = pd.read_csv(file_path)
+
+    # Process each row in the specified column
+    transformed_actions = df['action'].apply(safe_eval_list).apply(transform_row)
+
+    # Create a new DataFrame from the transformed data
+    transformed_df = df[['timestamp', 'image_filename']].copy()
+    transformed_df['action'] = transformed_actions.apply(str)
+
+    # Save the new DataFrame to a CSV file
+    transformed_df.to_csv('../../data/data_log_new.csv', index=False)
 
 
 # Usage example.
