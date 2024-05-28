@@ -122,7 +122,7 @@ class ComposeTransformations:
 
 class CarDataset(Dataset):
     """Custom dataset for loading car images and their labels.
-    
+
     Attributes:
         root (str): Root directory of the dataset.
         images_path (str): Path to the directory containing images.
@@ -174,6 +174,7 @@ class CarDataset(Dataset):
         plt.show()
 
 
+# Usage example.
 if __name__ == '__main__':
     # Visualize original dataset.
     car_dataset = CarDataset(root='../../data', transform=None)
