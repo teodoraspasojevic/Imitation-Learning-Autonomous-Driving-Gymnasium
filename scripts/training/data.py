@@ -22,7 +22,8 @@ class ResizeWithLabels:
         Returns:
             Tuple: Resized image and its (possibly reversed) label.
         """
-        img = transforms.Resize((96, 96))
+        transform = transforms.Resize((96, 96))
+        img = transform(img)
         return img, label
 
 
