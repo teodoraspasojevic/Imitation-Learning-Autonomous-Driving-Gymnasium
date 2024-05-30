@@ -33,8 +33,8 @@ class Model(nn.Module):
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(64 * 96 * 96, 128)
-        self.fc2 = nn.Linear(128, 3)
+        self.fc1 = nn.Linear(64 * 24 * 24, 128)
+        self.fc2 = nn.Linear(128, 5)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -95,8 +95,9 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, epochs=10
 
             train_total_loss += loss.item()
             _, predicted = torch.max(outputs.data, 1)
+            _, labels_class = torch.max(labels, 1)
             train_total += labels.size(0)
-            train_correct += (predicted == labels).sum().item()
+            train_correct += (predicted == labels_class).sum().item()
 
         train_loss = train_total_loss / len(train_loader)
         train_accuracy = 100 * train_correct / train_total
@@ -116,8 +117,9 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, epochs=10
                 loss = criterion(outputs, labels)
                 val_total_loss += loss.item()
                 _, predicted = torch.max(outputs.data, 1)
+                _, labels_class = torch.max(labels, 1)
                 val_total += labels.size(0)
-                val_correct += (predicted == labels).sum().item()
+                val_correct += (predicted == labels_class).sum().item()
 
             val_loss = val_total_loss / len(val_loader)
             val_accuracy = 100 * val_correct / val_total
@@ -157,8 +159,9 @@ def test_model(model, test_loader):
 
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
+            _, labels_class = torch.max(labels, 1)
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            correct += (predicted == labels_class).sum().item()
 
     print(f'Accuracy of the model on the test images: {100 * correct / total}%')
 
