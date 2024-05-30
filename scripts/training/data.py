@@ -10,6 +10,22 @@ import re
 import ast
 
 
+class ResizeWithLabels:
+    """Resize the image to 96x96 dimension."""
+
+    def __call__(self, img, label):
+        """
+        Args:
+                img (PIL.Image): The image to be transformed.
+                label: The label associated with the image.
+
+        Returns:
+            Tuple: Resized image and its (possibly reversed) label.
+        """
+        img = transforms.Resize((96, 96))
+        return img, label
+
+
 class RandomVerticalFlipWithLabel:
     """Randomly vertically flips an image with its label."""
 
@@ -232,6 +248,7 @@ if __name__ == '__main__':
     augment1 = RandomHorizontalFlipWithLabel()
     augment2 = RandomVerticalFlipWithLabel()
     augment3 = ChangeStreetColor()
+    augment4 = ResizeWithLabels()
     to_tensor = ToTensorWithLabel()
 
     augmentations = ComposeTransformations([
