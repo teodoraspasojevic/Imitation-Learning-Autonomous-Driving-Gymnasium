@@ -7,7 +7,6 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import random
 import re
-import ast
 
 
 class ResizeWithLabels:
@@ -16,11 +15,11 @@ class ResizeWithLabels:
     def __call__(self, img, label):
         """
         Args:
-                img (PIL.Image): The image to be transformed.
-                label: The label associated with the image.
+            img (PIL.Image): The image to be transformed.
+            label: The label associated with the image.
 
         Returns:
-            Tuple: Resized image and its (possibly reversed) label.
+            Tuple: Resized image and its label.
         """
         transform = transforms.Resize((96, 96))
         img = transform(img)
@@ -30,16 +29,23 @@ class ResizeWithLabels:
 class RandomVerticalFlipWithLabel:
     """Randomly vertically flips an image with its label."""
 
+    def __init__(self, prob):
+        """
+        Args:
+            prob (float): Probability of performing the transformation.
+        """
+        self.prob = prob
+
     def __call__(self, img, label):
         """
         Args:
-                img (PIL.Image): The image to be transformed.
-                label: The label associated with the image.
+            img (PIL.Image): The image to be transformed.
+            label: The label associated with the image.
 
         Returns:
             Tuple: The (possibly) vertically flipped image and its (possibly reversed) label.
         """
-        if random.random() > 0.5:
+        if random.random() < self.prob:
             img = transforms.functional.vflip(img)
             # Convert command from to left to, to right.
             if label[2] == 1:
@@ -53,25 +59,59 @@ class RandomVerticalFlipWithLabel:
 class RandomHorizontalFlipWithLabel:
     """Randomly horizontally flips an image with accordingly flipped label."""
 
+    def __init__(self, prob):
+        """
+        Args:
+            prob (float): Probability of performing the transformation.
+        """
+        self.prob = prob
+
     def __call__(self, img, label):
         """
         Args:
-                img (PIL.Image): The image to be transformed.
-                label: The label associated with the image.
+            img (PIL.Image): The image to be transformed.
+            label: The label associated with the image.
 
         Returns:
             Tuple: The (possibly) horizontally flipped image and its label.
         """
-        if random.random() > 0.5:
+        if random.random() < self.prob:
             img = transforms.functional.hflip(img)
         return img, label
+
+
+class RandomRotationWithLabel:
+    """Randomly rotates the image, for a certain angle."""
+
+    def __init__(self, degrees, prob):
+        """
+        Args:
+            degrees (int): The degree with which, the image is to be rotated.
+            prob (float): Probability of performing the transformation.
+        """
+        self.degrees = degrees
+        self.prob = prob
+
+    def __call__(self, image, label):
+        """
+        Args:
+            image (PIL.Image): The image to be transformed.
+            label: The label associated with the image.
+
+        Returns:
+            Tuple: The (possibly) rotated image and its label.
+        """
+        if random.random() < self.prob:
+            angle = random.uniform(-self.degrees, self.degrees)
+            image = transforms.functional.rotate(image, angle)
+        return image, label
 
 
 class ChangeStreetColor:
     """Transforms grey areas in the image to brown.
 
     Attributes:
-        brown_colour(tuple): RGB values of brown color to be set.
+        brown_color(tuple): RGB values of brown color to be set.
     """
 
     def __init__(self):
@@ -80,8 +120,8 @@ class ChangeStreetColor:
     def __call__(self, image, label):
         """
         Args:
-                image (PIL.Image): The image to be transformed.
-                label: The label associated with the image.
+            image (PIL.Image): The image to be transformed.
+            label: The label associated with the image.
 
         Returns:
             Tuple: The transformed image and its label.
@@ -109,8 +149,8 @@ class ToTensorWithLabel:
     def __call__(self, image, label):
         """
         Args:
-                img (PIL.Image): The image to be transformed.
-                label: The label associated with the image.
+            image (PIL.Image): The image to be transformed.
+            label: The label associated with the image.
 
         Returns:
         """
@@ -124,15 +164,15 @@ class ComposeTransformations:
     def __init__(self, transformations):
         """
         Args:
-                transformations (list): List of transformations to be composed.
+            transformations (list): List of transformations to be composed.
         """
         self.transformations = transformations
 
     def __call__(self, image, label):
         """
         Args:
-                img (PIL.Image): The image to be transformed.
-                label: The label associated with the image.
+            image (PIL.Image): The image to be transformed.
+            label: The label associated with the image.
 
         Returns:
             Tuple: The transformed image and its label.
@@ -196,49 +236,6 @@ class CarDataset(Dataset):
         plt.show()
 
 
-def safe_eval_list(row):
-    try:
-        return ast.literal_eval(row)
-    except (ValueError, SyntaxError):
-        # Handle the case where the list format is incorrect
-        row = row.replace('.', ',')
-        return ast.literal_eval(row)
-
-
-def transform_row(row):
-    # Initialize the new array with zeros
-    new_array = [0, 0, 0, 0, 0]
-
-    # Apply the given conditions
-    if row[0] == -1:
-        new_array[2] = 1
-    if row[0] == 1:
-        new_array[3] = 1
-    if row[1] == 1:
-        new_array[0] = 1
-    if row[2] == 0.8:
-        new_array[1] = 1
-    if all(element == 0 for element in row):
-        new_array[4] = 1
-
-    return new_array
-
-
-def modify_labels():
-    file_path = '../../data/data_log.csv'
-    df = pd.read_csv(file_path)
-
-    # Process each row in the specified column
-    transformed_actions = df['action'].apply(safe_eval_list).apply(transform_row)
-
-    # Create a new DataFrame from the transformed data
-    transformed_df = df[['timestamp', 'image_filename']].copy()
-    transformed_df['action'] = transformed_actions.apply(str)
-
-    # Save the new DataFrame to a CSV file
-    transformed_df.to_csv('../../data/data_log_new.csv', index=False)
-
-
 # Usage example.
 if __name__ == '__main__':
     # Visualize original dataset.
@@ -246,16 +243,18 @@ if __name__ == '__main__':
     car_dataset.visualize()
 
     # Visualize augmented dataset.
-    augment1 = RandomHorizontalFlipWithLabel()
-    augment2 = RandomVerticalFlipWithLabel()
+    augment1 = RandomHorizontalFlipWithLabel(prob=0.5)
+    augment2 = RandomVerticalFlipWithLabel(prob=0.5)
     augment3 = ChangeStreetColor()
     augment4 = ResizeWithLabels()
+    augment5 = RandomRotationWithLabel(degrees=20, prob=0.5)
     to_tensor = ToTensorWithLabel()
 
     augmentations = ComposeTransformations([
         augment1,
         augment2,
-        augment3
+        augment3,
+        augment5
         # to_tensor
     ])
 
