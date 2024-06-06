@@ -32,9 +32,6 @@ model = Model()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
-model, history, best_epoch = train_model(model, train_loader, val_loader, criterion, optimizer, epochs=10)
+model, history, best_epoch = train_model(model, train_loader, val_loader, test_loader, criterion, optimizer, epochs=20)
 
 plot_history(history, best_epoch)
-
-test_model(model, test_loader)
-
