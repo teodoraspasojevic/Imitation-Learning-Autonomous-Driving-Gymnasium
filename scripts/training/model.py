@@ -7,6 +7,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class EarlyStopping:
+    """
+    Early stopping to terminate training when validation loss does not improve.
+
+    Attributes:
+        patience (int): Number of epochs to wait after the last time validation loss improved.
+        min_delta (float): Minimum change in the monitored quantity to qualify as an improvement.
+        counter (int): Counter for epochs with no improvement.
+        best_loss (float): Best validation loss observed.
+        early_stop (bool): Flag to indicate if early stopping should be performed.
+    """
+
     def __init__(self, patience=3, min_delta=0.0):
         self.patience = patience
         self.min_delta = min_delta
@@ -15,6 +26,12 @@ class EarlyStopping:
         self.early_stop = False
 
     def __call__(self, val_loss):
+        """
+        Checks if early stopping should be performed based on the validation loss.
+
+        Args:
+            val_loss (float): Current validation loss.
+        """
         if self.best_loss is None:
             self.best_loss = val_loss
         elif val_loss > self.best_loss - self.min_delta:
@@ -27,6 +44,18 @@ class EarlyStopping:
 
 
 class Model(nn.Module):
+    """
+   Convolutional Neural Network model for image classification.
+
+   Attributes:
+       conv1 (nn.Conv2d): First convolutional layer.
+       pool1 (nn.MaxPool2d): First max pooling layer.
+       conv2 (nn.Conv2d): Second convolutional layer.
+       pool2 (nn.MaxPool2d): Second max pooling layer.
+       fc1 (nn.Linear): First fully connected layer.
+       fc2 (nn.Linear): Second fully connected layer.
+   """
+
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
@@ -37,6 +66,15 @@ class Model(nn.Module):
         self.fc2 = nn.Linear(128, 5)
 
     def forward(self, x):
+        """
+        Forward pass of the model.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         x = self.conv1(x)
         x = F.relu(x)
         x = self.pool1(x)
@@ -53,12 +91,40 @@ class Model(nn.Module):
 
 
 def to_device(data, device):
+    """
+    Moves a tensor or a collection of tensors to the specified device.
+
+    Args:
+        data (torch.Tensor or list/tuple): Input tensor or collection of tensors.
+        device (torch.device): Device to move the data to.
+
+    Returns:
+        torch.Tensor or list/tuple: Data moved to the specified device.
+    """
     if isinstance(data, (list, tuple)):
         return [to_device(x, device) for x in data]
     return data.to(device, non_blocking=True)
 
 
 def train_model(model, train_loader, val_loader, test_loader, criterion, optimizer, epochs=10):
+    """
+    Trains the model and evaluates on validation and test datasets.
+
+    Args:
+        model (nn.Module): The model to be trained.
+        train_loader (torch.utils.data.DataLoader): DataLoader for the training dataset.
+        val_loader (torch.utils.data.DataLoader): DataLoader for the validation dataset.
+        test_loader (torch.utils.data.DataLoader): DataLoader for the test dataset.
+        criterion (torch.nn.Module): Loss function.
+        optimizer (torch.optim.Optimizer): Optimizer for updating the model parameters.
+        epochs (int): Number of epochs to train the model. Defaults to 10.
+
+    Returns:
+        model (nn.Module): The trained model.
+        history (dict): Dictionary containing training history.
+        best_epoch (int): The epoch with the best validation accuracy.
+    """
+
     # Save the training history.
     history = {
         'train_loss': [],
@@ -131,6 +197,7 @@ def train_model(model, train_loader, val_loader, test_loader, criterion, optimiz
                 best_epoch = epoch
                 torch.save(model.state_dict(), 'best_model.pth')
 
+        # Test the model.
         test_accuracy = test_model(model, test_loader)
 
         # Save training history.
@@ -161,7 +228,7 @@ def test_model(model, test_loader):
     test_loader (torch.utils.data.DataLoader): The test data loader.
 
     Returns:
-
+    float: The test accuracy.
     """
     model.to(device)
     model.eval()
@@ -197,34 +264,41 @@ def load_best_model(model, checkpoint_path):
 
 
 def plot_history(history, best_epoch):
-  train_losses = history['train_loss']
-  val_losses = history['val_loss']
-  train_accuracies = history['train_accuracy']
-  val_accuracies = history['val_accuracy']
-  test_accuracies = history['test_accuracy']
+    """
+    Plot training, validation, and test accuracies and losses.
 
-  epochs = range(1, len(train_losses) + 1)
+    Args:
+        history (dict): Dictionary containing training history.
+        best_epoch (int): The epoch with the best validation accuracy.
+    """
+    train_losses = history['train_loss']
+    val_losses = history['val_loss']
+    train_accuracies = history['train_accuracy']
+    val_accuracies = history['val_accuracy']
+    test_accuracies = history['test_accuracy']
 
-  # Plotting training and validation losses.
-  plt.figure(figsize=(12, 6))
-  plt.subplot(1, 2, 1)
-  plt.plot(epochs, train_losses, 'b-', label='Training Loss')
-  plt.plot(epochs, val_losses, 'r-', label='Validation Loss')
-  plt.title('Training and Validation Loss')
-  plt.xlabel('Epochs')
-  plt.ylabel('Loss')
-  plt.legend()
+    epochs = range(1, len(train_losses) + 1)
 
-  # Plotting training, validation and test accuracies.
-  plt.subplot(1, 2, 2)
-  plt.plot(epochs, train_accuracies, 'b-', label='Training Accuracy')
-  plt.plot(epochs, val_accuracies, 'r-', label='Validation Accuracy')
-  plt.plot(epochs, test_accuracies, 'g-', label='Test Accuracy')
-  plt.title('Training, Validation and Test Accuracy')
-  plt.xlabel('Epochs')
-  plt.ylabel('Accuracy (%)')
-  plt.legend()
+    # Plotting training and validation losses.
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, train_losses, 'b-', label='Training Loss')
+    plt.plot(epochs, val_losses, 'r-', label='Validation Loss')
+    plt.title('Training and Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
 
-  plt.show()
+    # Plotting training, validation and test accuracies.
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, train_accuracies, 'b-', label='Training Accuracy')
+    plt.plot(epochs, val_accuracies, 'r-', label='Validation Accuracy')
+    plt.plot(epochs, test_accuracies, 'g-', label='Test Accuracy')
+    plt.title('Training, Validation and Test Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy (%)')
+    plt.legend()
 
-  print(f'Best epoch was: {best_epoch}')
+    plt.show()
+
+    print(f'Best epoch was: {best_epoch}')
