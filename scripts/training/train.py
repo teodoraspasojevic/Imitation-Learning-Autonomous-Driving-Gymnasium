@@ -1,4 +1,4 @@
-from data import CarDataset, ResizeWithLabels, RandomHorizontalFlipWithLabel, RandomVerticalFlipWithLabel, ChangeStreetColor, ToTensorWithLabel, ComposeTransformations
+from data import CarDataset, ResizeWithLabels, RandomHorizontalFlipWithLabel, RandomRotationWithLabel, RGBTo3CGrayscale, ToTensorWithLabel, ComposeTransformations
 from model import Model, to_device, train_model, test_model, plot_history
 from torch.utils.data import DataLoader, Subset
 import torch.nn as nn
@@ -6,10 +6,13 @@ import torch.optim as optim
 
 transforms = ComposeTransformations([
     ResizeWithLabels(),
+    # RandomHorizontalFlipWithLabel(prob=0.2),
+    # RandomRotationWithLabel(degrees=20, prob=0.2),
+    RGBTo3CGrayscale(),
     ToTensorWithLabel()
 ])
 
-car_dataset = CarDataset(root='../../data', transform=transforms)
+car_dataset = CarDataset(root='../../data2', transform=transforms)
 
 train_size = int(0.6 * len(car_dataset))
 val_size = int(0.2 * len(car_dataset))
