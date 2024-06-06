@@ -58,13 +58,14 @@ def to_device(data, device):
     return data.to(device, non_blocking=True)
 
 
-def train_model(model, train_loader, val_loader, criterion, optimizer, epochs=10):
+def train_model(model, train_loader, val_loader, test_loader, criterion, optimizer, epochs=10):
     # Save the training history.
     history = {
         'train_loss': [],
         'train_accuracy': [],
         'val_loss': [],
-        'val_accuracy': []
+        'val_accuracy': [],
+        'test_accuracy': []
     }
     # Move the model to GPU.
     model.to(device)
@@ -130,14 +131,17 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, epochs=10
                 best_epoch = epoch
                 torch.save(model.state_dict(), 'best_model.pth')
 
+        test_accuracy = test_model(model, test_loader)
+
         # Save training history.
         history['train_loss'].append(train_loss)
         history['train_accuracy'].append(train_accuracy)
         history['val_loss'].append(val_loss)
         history['val_accuracy'].append(val_accuracy)
+        history['test_accuracy'].append(test_accuracy)
 
         print(f"Epoch {epoch+1}/{epochs}: Train Loss: {train_loss:.4f}, Train Acc: {train_accuracy:.2f}%, "
-              f"Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.2f}%")
+              f"Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.2f}%, Test Acc: {test_accuracy:.2f}%")
 
         early_stopping(val_loss)
 
@@ -149,6 +153,16 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, epochs=10
 
 
 def test_model(model, test_loader):
+    """
+    Test the model on the test dataset and return accuracy.
+
+    Args:
+    model (torch.nn.Module): The model to be tested.
+    test_loader (torch.utils.data.DataLoader): The test data loader.
+
+    Returns:
+
+    """
     model.to(device)
     model.eval()
     correct = 0
@@ -163,7 +177,23 @@ def test_model(model, test_loader):
             total += labels.size(0)
             correct += (predicted == labels_class).sum().item()
 
-    print(f'Accuracy of the model on the test images: {100 * correct / total}%')
+    test_accuracy = 100 * correct / total
+    return test_accuracy
+
+
+def load_best_model(model, checkpoint_path):
+    """
+    Load the best model from the checkpoint.
+
+    Args:
+    model (torch.nn.Module): The model to load the weights into.
+    checkpoint_path (str): Path to the checkpoint file.
+
+    Returns:
+    model (torch.nn.Module): The model with loaded weights.
+    """
+    model.load_state_dict(torch.load(checkpoint_path))
+    return model
 
 
 def plot_history(history, best_epoch):
@@ -171,6 +201,7 @@ def plot_history(history, best_epoch):
   val_losses = history['val_loss']
   train_accuracies = history['train_accuracy']
   val_accuracies = history['val_accuracy']
+  test_accuracies = history['test_accuracy']
 
   epochs = range(1, len(train_losses) + 1)
 
@@ -184,11 +215,12 @@ def plot_history(history, best_epoch):
   plt.ylabel('Loss')
   plt.legend()
 
-  # Plotting training and validation accuracies.
+  # Plotting training, validation and test accuracies.
   plt.subplot(1, 2, 2)
   plt.plot(epochs, train_accuracies, 'b-', label='Training Accuracy')
   plt.plot(epochs, val_accuracies, 'r-', label='Validation Accuracy')
-  plt.title('Training and Validation Accuracy')
+  plt.plot(epochs, test_accuracies, 'g-', label='Test Accuracy')
+  plt.title('Training, Validation and Test Accuracy')
   plt.xlabel('Epochs')
   plt.ylabel('Accuracy (%)')
   plt.legend()
