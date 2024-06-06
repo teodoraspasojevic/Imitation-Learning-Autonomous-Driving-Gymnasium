@@ -143,6 +143,14 @@ class ChangeStreetColor:
         return image, label
 
 
+class RGBTo3CGrayscale:
+    """Converts RGB images to 3 channels of gray-scale image."""
+    def __call__(self, image, label):
+        image = transforms.functional.rgb_to_grayscale(image, num_output_channels=1)  # Convert to grayscale.
+        image = image.convert('RGB')                                                  # Convert back to three channels.
+        return image, label
+
+
 class ToTensorWithLabel:
     """Converts an image to a tensor."""
 
