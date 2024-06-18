@@ -3,9 +3,9 @@ from model import Model, test_model, load_best_model
 from torch.utils.data import DataLoader, Subset
 
 model = Model()
-model = load_best_model(model, './best_model3.pth')
+model = load_best_model(model, './best_model_no_augment.pth')
 
-# Test the model on up-down flipped dataset.
+# Test the model on left-right flipped dataset.
 
 transforms1 = ComposeTransformations([
     ResizeWithLabels(),
@@ -28,7 +28,7 @@ test_accuracy = test_model(model, test_loader)
 print('###############################################')
 print(f'Test accuracy on the first dataset: {test_accuracy:.4f}%')
 
-# Test the model on left-right flipped dataset.
+# Test the model on upside-down flipped dataset.
 
 transforms2 = ComposeTransformations([
     ResizeWithLabels(),
