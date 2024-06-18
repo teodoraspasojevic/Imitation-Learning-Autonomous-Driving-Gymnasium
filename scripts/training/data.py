@@ -47,12 +47,6 @@ class RandomVerticalFlipWithLabel:
         """
         if random.random() < self.prob:
             img = transforms.functional.vflip(img)
-            # Convert command from to left to, to right.
-            if label[2] == 1:
-                label[2], label[3] = 0, 1
-            # Convert command from to right to, to left.
-            if label[3] == 1:
-                label[2], label[3] = 1, 0
         return img, label
 
 
@@ -77,6 +71,12 @@ class RandomHorizontalFlipWithLabel:
         """
         if random.random() < self.prob:
             img = transforms.functional.hflip(img)
+            # Convert command from to left to, to right.
+            if label[2] == 1:
+                label[2], label[3] = 0, 1
+            # Convert command from to right to, to left.
+            if label[3] == 1:
+                label[2], label[3] = 1, 0
         return img, label
 
 
