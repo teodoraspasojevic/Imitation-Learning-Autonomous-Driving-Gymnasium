@@ -13,7 +13,7 @@ transforms1 = ComposeTransformations([
     ToTensorWithLabel()
 ])
 
-car_dataset = CarDataset(root='../../data2', transform=transforms1)
+car_dataset = CarDataset(root='../../data', transform=transforms1)
 
 train_size = int(0.6 * len(car_dataset))
 val_size = int(0.2 * len(car_dataset))
@@ -36,7 +36,7 @@ transforms2 = ComposeTransformations([
     ToTensorWithLabel()
 ])
 
-car_dataset = CarDataset(root='../../data2', transform=transforms1)
+car_dataset = CarDataset(root='../../data', transform=transforms1)
 
 train_size = int(0.6 * len(car_dataset))
 val_size = int(0.2 * len(car_dataset))
@@ -59,7 +59,7 @@ transforms1 = ComposeTransformations([
     ToTensorWithLabel()
 ])
 
-car_dataset = CarDataset(root='../../data2', transform=transforms1)
+car_dataset = CarDataset(root='../../data', transform=transforms1)
 
 train_size = int(0.6 * len(car_dataset))
 val_size = int(0.2 * len(car_dataset))
