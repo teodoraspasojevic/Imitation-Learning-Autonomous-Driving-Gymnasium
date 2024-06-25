@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -195,7 +196,7 @@ def train_model(model, train_loader, val_loader, test_loader, criterion, optimiz
             if val_accuracy > best_val_accuracy:
                 best_val_accuracy = val_accuracy
                 best_epoch = epoch
-                torch.save(model.state_dict(), 'best_model.pth')
+                torch.save(model.state_dict(), 'best_model_weighted_ce.pth')
 
         # Test the model.
         test_accuracy = test_model(model, test_loader)
@@ -302,3 +303,30 @@ def plot_history(history, best_epoch):
     plt.show()
 
     print(f'Best epoch was: {best_epoch}')
+
+
+def get_confusion_matrix(data_loader, model):
+    """
+    Computes the confusion matrix for a given model and data loader.
+
+    Args:
+       data_loader (torch.utils.data.DataLoader): DataLoader for the dataset to evaluate.
+       model (torch.nn.Module): The model to evaluate.
+
+    Returns:
+       numpy.ndarray: Confusion matrix of shape (num_classes, num_classes).
+    """
+    model.eval()
+    all_targets = []
+    all_predictions = []
+    with torch.no_grad():
+        for images, targets in data_loader:
+            outputs = model(images)
+            _, predicted = torch.max(outputs, 1)
+            all_targets.extend(targets)
+            all_predictions.extend(predicted)
+
+    # Create the confusion matrix
+    cm = confusion_matrix(all_targets, all_predictions)
+
+    return cm
