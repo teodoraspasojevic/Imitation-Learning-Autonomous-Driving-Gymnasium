@@ -1,18 +1,45 @@
-from data import CarDataset, ResizeWithLabels, RandomHorizontalFlipWithLabel, RandomRotationWithLabel, RGBTo3CGrayscale, ToTensorWithLabel, ComposeTransformations
+from data import CarDataset, ResizeWithLabels, RandomHorizontalFlipWithLabel, RandomVerticalFlipWithLabel, RandomRotationWithLabel, RGBTo3CGrayscale, ToTensorWithLabel, ComposeTransformations
 from model import Model, to_device, train_model, test_model, plot_history
 from torch.utils.data import DataLoader, Subset
+from collections import Counter
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
+
+def compute_class_weights(train_dataset):
+    class_counts = Counter()
+    for _, labels in train_dataset:
+        for index, label in enumerate(labels):
+            if label == 1:
+                class_counts[index] += 1
+
+    # Compute weights inversely proportional to class frequencies.
+    total_samples = sum(class_counts.values())
+    class_weights = {cls: total_samples / count for cls, count in class_counts.items()}
+
+    # Normalize weights.
+    total_weight = sum(class_weights.values())
+    class_weights = {cls: weight / total_weight for cls, weight in class_weights.items()}
+
+    # Convert weights to tensor.
+    weights = torch.tensor([class_weights[i] for i in range(len(class_weights))], dtype=torch.float32)
+
+    return weights
+
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 transforms = ComposeTransformations([
     ResizeWithLabels(),
-    # RandomHorizontalFlipWithLabel(prob=0.2),
-    # RandomRotationWithLabel(degrees=20, prob=0.2),
-    RGBTo3CGrayscale(),
+    RandomHorizontalFlipWithLabel(prob=0.2),
+    RandomVerticalFlipWithLabel(prob=0.2),
+    RandomRotationWithLabel(degrees=20, prob=0.2),
+    # RGBTo3CGrayscale(),
     ToTensorWithLabel()
 ])
 
-car_dataset = CarDataset(root='../../data2', transform=transforms)
+car_dataset = CarDataset(root='../../data', transform=transforms)
 
 train_size = int(0.6 * len(car_dataset))
 val_size = int(0.2 * len(car_dataset))
@@ -32,7 +59,9 @@ test_loader = DataLoader(dataset=test_dataset, batch_size=64, shuffle=False)
 
 model = Model()
 
-criterion = nn.CrossEntropyLoss()
+weights = compute_class_weights(train_dataset)
+criterion = nn.CrossEntropyLoss(weight=weights)
+weights = weights.to(device)
 optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
 model, history, best_epoch = train_model(model, train_loader, val_loader, test_loader, criterion, optimizer, epochs=20)
