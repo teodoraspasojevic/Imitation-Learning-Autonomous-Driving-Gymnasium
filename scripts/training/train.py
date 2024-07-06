@@ -1,5 +1,5 @@
 from data import CarDataset, ResizeWithLabels, RandomHorizontalFlipWithLabel, RandomVerticalFlipWithLabel, RandomRotationWithLabel, RGBTo3CGrayscale, ToTensorWithLabel, ComposeTransformations
-from model import Model, to_device, train_model, test_model, plot_history
+from model import Model, RecurrentModel, to_device, train_model, test_model, plot_history
 from torch.utils.data import DataLoader, Subset
 from collections import Counter
 import torch
@@ -39,7 +39,7 @@ transforms = ComposeTransformations([
     ToTensorWithLabel()
 ])
 
-car_dataset = CarDataset(root='../../data', transform=transforms)
+car_dataset = CarDataset(root='../../data_more_commands', transform=transforms)
 
 train_size = int(0.6 * len(car_dataset))
 val_size = int(0.2 * len(car_dataset))
@@ -53,15 +53,15 @@ train_dataset = Subset(car_dataset, train_indices)
 val_dataset = Subset(car_dataset, val_indices)
 test_dataset = Subset(car_dataset, test_indices)
 
-train_loader = DataLoader(dataset=train_dataset, batch_size=64, shuffle=True)
-val_loader = DataLoader(dataset=val_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(dataset=test_dataset, batch_size=64, shuffle=False)
+train_loader = DataLoader(dataset=train_dataset, batch_size=128, shuffle=True)
+val_loader = DataLoader(dataset=val_dataset, batch_size=128, shuffle=True)
+test_loader = DataLoader(dataset=test_dataset, batch_size=128, shuffle=False)
 
-model = Model()
+model = RecurrentModel()
 
-weights = compute_class_weights(train_dataset)
-criterion = nn.CrossEntropyLoss(weight=weights)
-weights = weights.to(device)
+# weights = compute_class_weights(train_dataset)
+criterion = nn.CrossEntropyLoss()
+# weights = weights.to(device)
 optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
 model, history, best_epoch = train_model(model, train_loader, val_loader, test_loader, criterion, optimizer, epochs=20)
