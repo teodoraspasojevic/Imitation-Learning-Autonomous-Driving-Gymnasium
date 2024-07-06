@@ -14,6 +14,8 @@ from gymnasium.utils import EzPickle
 
 import os
 import csv
+import cv2
+import matplotlib.pyplot as plt
 from datetime import datetime
 from PIL import Image
 
@@ -861,6 +863,13 @@ if __name__ == "__main__":
     model = load_best_model(model, 'best_model_augment.pth')
     model.eval()
 
+    # Set up the video writer.
+
+    frame_width = VIDEO_W
+    frame_height = VIDEO_H
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter('control.avi', fourcc, 20, (frame_width, frame_height))
+
     # Run the simulation.
 
     quit = False
@@ -875,7 +884,7 @@ if __name__ == "__main__":
                 s, r, terminated, truncated, info = env.step(a)
                 total_reward += r
 
-            if steps % 1 == 0 and  (truncated or terminated and steps >= 25):
+            if steps % 1 == 0 or truncated or terminated and steps >= 25:
                 register_input()
 
                 # Send the commands.
@@ -889,13 +898,11 @@ if __name__ == "__main__":
                 input = transformed_image.unsqueeze(0)
                 input = input.to(device)
 
-                game_surface_arr =pygame.surfarray.array3d(pygame.display.get_surface())
-                image_tensor, _ = transform(Image.fromarray(game_surface_arr), rand_label)
-                image_tensor = image_tensor.unsqueeze(0).to(device)
+                out.write(cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR))
 
                 # Input the snapshot into the model.
                 with torch.no_grad():
-                    output = model(image_tensor)
+                    output = model(input)
                     output = torch.softmax(output, 1)
                     _, predicted = torch.max(output, 1)
                     label = predicted.item()
@@ -910,3 +917,4 @@ if __name__ == "__main__":
                 if terminated or truncated or restart or quit:
                     break
     env.close()
+    out.release()

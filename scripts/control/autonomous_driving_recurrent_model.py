@@ -14,6 +14,7 @@ from gymnasium.utils import EzPickle
 
 import os
 import csv
+import cv2
 from datetime import datetime
 from PIL import Image
 
@@ -861,6 +862,13 @@ if __name__ == "__main__":
     model = load_best_model(model, 'best_model_lstm.pth')
     model.eval()
 
+    # Set up the video writer.
+
+    frame_width = VIDEO_W
+    frame_height = VIDEO_H
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter('control_recurrent.avi', fourcc, 20, (frame_width, frame_height))
+
     sequence_length = 16
     frame_sequence = []
 
@@ -881,14 +889,17 @@ if __name__ == "__main__":
                 total_reward += r
 
                 # Save the snapshot of the world and process it for the model.
-                game_surface_arr =pygame.surfarray.array3d(pygame.display.get_surface())
-                image_tensor, _ = transform(Image.fromarray(game_surface_arr), rand_label)
-                image_frame = image_tensor.unsqueeze(0).to(device)
+                image_array = env._render(mode="rgb_array")
+                image = Image.fromarray(image_array)
+                transformed_image, _ = transform(image, rand_label)
+                input_frame = transformed_image.unsqueeze(0).to(device)
+
+                out.write(cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR))
 
                 # Add the new frame to the sequence.
                 frame_sequence.append(input_frame)
 
-                # Check the fullness of our sequence buffer.
+                # Check the fullness of the sequence buffer.
                 if len(frame_sequence) < sequence_length:
                     continue
 
@@ -897,8 +908,6 @@ if __name__ == "__main__":
 
                 input_sequence = torch.cat(frame_sequence, dim=0).unsqueeze(0).to(device)
                 input_sequence = input_sequence.squeeze(0)
-
-
 
                 # Input the snapshot into the model.
                 with torch.no_grad():
@@ -920,3 +929,4 @@ if __name__ == "__main__":
                 if terminated or truncated or restart or quit:
                     break
     env.close()
+    out.release()
