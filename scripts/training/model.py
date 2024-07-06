@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
+# from sklearn.metrics import confusion_matrix
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -90,6 +90,65 @@ class Model(nn.Module):
 
         return x
 
+class RecurrentModel(nn.Module):
+    """
+   Convolutional Neural Network model for image classification.
+
+   Attributes:
+       conv1 (nn.Conv2d): First convolutional layer.
+       pool1 (nn.MaxPool2d): First max pooling layer.
+       conv2 (nn.Conv2d): Second convolutional layer.
+       pool2 (nn.MaxPool2d): Second max pooling layer.
+       lstm (nn.LSTM): LSTM for learning temporal dependencies.
+       fc (nn.Linear): Fully connected layer as a classification head.
+   """
+
+    def __init__(self, hidden_dim=128, num_layers=1, sequence_length=16):
+        super().__init__()
+        self.sequence_length = sequence_length
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.lstm = nn.LSTM(input_size=64 * 24 * 24, hidden_size=hidden_dim, num_layers=num_layers, batch_first=True)
+        self.fc = nn.Linear(128, 5)
+
+    def forward(self, x):
+        """
+        Forward pass of the model.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
+        x = self.pool1(F.relu(self.conv1(x)))
+        x = self.pool2(F.relu(self.conv2(x)))
+
+        # Reshape the tensor to (batch_size, sequence_length, input_size)
+        original_batch_size = x.size(0)
+        sequence_length = self.sequence_length
+        batch_size = original_batch_size // sequence_length
+        x = x[:batch_size * sequence_length]
+        x = x.view(batch_size, sequence_length, 64 * 24 * 24)
+
+        if batch_size == 0:
+            x = torch.zeros(original_batch_size, 128)
+            return x
+
+        x, _ = self.lstm(x)
+
+        x = x.contiguous().view(batch_size * sequence_length, -1)
+
+        x = self.fc(x)
+        if original_batch_size % sequence_length != 0:
+            padding_size = original_batch_size % sequence_length
+            padding = torch.zeros(padding_size, x.size(1))
+            x = torch.cat((x, padding), dim=0)
+
+        return x
+
 
 def to_device(data, device):
     """
@@ -157,6 +216,11 @@ def train_model(model, train_loader, val_loader, test_loader, criterion, optimiz
 
             optimizer.zero_grad()
             outputs = model(images)
+
+            # Ensure labels are in the correct shape for CrossEntropyLoss
+            if labels.ndimension() == 2:
+                labels = torch.argmax(labels, dim=1)
+
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -196,7 +260,7 @@ def train_model(model, train_loader, val_loader, test_loader, criterion, optimiz
             if val_accuracy > best_val_accuracy:
                 best_val_accuracy = val_accuracy
                 best_epoch = epoch
-                torch.save(model.state_dict(), 'best_model_weighted_ce.pth')
+                torch.save(model.state_dict(), 'best_model.pth')
 
         # Test the model.
         test_accuracy = test_model(model, test_loader)
@@ -305,28 +369,28 @@ def plot_history(history, best_epoch):
     print(f'Best epoch was: {best_epoch}')
 
 
-def get_confusion_matrix(data_loader, model):
-    """
-    Computes the confusion matrix for a given model and data loader.
-
-    Args:
-       data_loader (torch.utils.data.DataLoader): DataLoader for the dataset to evaluate.
-       model (torch.nn.Module): The model to evaluate.
-
-    Returns:
-       numpy.ndarray: Confusion matrix of shape (num_classes, num_classes).
-    """
-    model.eval()
-    all_targets = []
-    all_predictions = []
-    with torch.no_grad():
-        for images, targets in data_loader:
-            outputs = model(images)
-            _, predicted = torch.max(outputs, 1)
-            all_targets.extend(targets)
-            all_predictions.extend(predicted)
-
-    # Create the confusion matrix
-    cm = confusion_matrix(all_targets, all_predictions)
-
-    return cm
+# def get_confusion_matrix(data_loader, model):
+#     """
+#     Computes the confusion matrix for a given model and data loader.
+#
+#     Args:
+#        data_loader (torch.utils.data.DataLoader): DataLoader for the dataset to evaluate.
+#        model (torch.nn.Module): The model to evaluate.
+#
+#     Returns:
+#        numpy.ndarray: Confusion matrix of shape (num_classes, num_classes).
+#     """
+#     model.eval()
+#     all_targets = []
+#     all_predictions = []
+#     with torch.no_grad():
+#         for images, targets in data_loader:
+#             outputs = model(images)
+#             _, predicted = torch.max(outputs, 1)
+#             all_targets.extend(targets)
+#             all_predictions.extend(predicted)
+#
+#     # Create the confusion matrix
+#     cm = confusion_matrix(all_targets, all_predictions)
+#
+#     return cm
