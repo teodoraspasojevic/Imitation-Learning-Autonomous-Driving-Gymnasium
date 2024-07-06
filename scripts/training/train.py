@@ -39,7 +39,7 @@ transforms = ComposeTransformations([
     ToTensorWithLabel()
 ])
 
-car_dataset = CarDataset(root='../../data_more_commands', transform=transforms)
+car_dataset = CarDataset(root='../../data', transform=transforms)
 
 train_size = int(0.6 * len(car_dataset))
 val_size = int(0.2 * len(car_dataset))

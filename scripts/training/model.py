@@ -260,7 +260,7 @@ def train_model(model, train_loader, val_loader, test_loader, criterion, optimiz
             if val_accuracy > best_val_accuracy:
                 best_val_accuracy = val_accuracy
                 best_epoch = epoch
-                torch.save(model.state_dict(), 'best_model.pth')
+                torch.save(model.state_dict(), '../../models/best_model.pth')
 
         # Test the model.
         test_accuracy = test_model(model, test_loader)
