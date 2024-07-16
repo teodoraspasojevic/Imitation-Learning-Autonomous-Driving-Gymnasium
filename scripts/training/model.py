@@ -46,25 +46,35 @@ class EarlyStopping:
 
 class Model(nn.Module):
     """
-   Convolutional Neural Network model for image classification.
+    Convolutional Neural Network model for image classification.
 
-   Attributes:
-       conv1 (nn.Conv2d): First convolutional layer.
-       pool1 (nn.MaxPool2d): First max pooling layer.
-       conv2 (nn.Conv2d): Second convolutional layer.
-       pool2 (nn.MaxPool2d): Second max pooling layer.
-       fc1 (nn.Linear): First fully connected layer.
-       fc2 (nn.Linear): Second fully connected layer.
-   """
+    Attributes:
+        conv1 (nn.Conv2d): First convolutional layer.
+        relu1 (nn.ReLU): ReLU activation after the first convolutional layer.
+        pool1 (nn.MaxPool2d): First max pooling layer.
+        conv2 (nn.Conv2d): Second convolutional layer.
+        relu2 (nn.ReLU): ReLU activation after the second convolutional layer.
+        pool2 (nn.MaxPool2d): Second max pooling layer.
+        fc1 (nn.Linear): First fully connected layer.
+        relu3 (nn.ReLU): ReLU activation after the first fully connected layer.
+        fc2 (nn.Linear): Second fully connected layer.
+    """
 
     def __init__(self):
-        super().__init__()
+        super(Model, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
+        self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.relu2 = nn.ReLU()
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.fc1 = nn.Linear(64 * 24 * 24, 128)
+        self.relu3 = nn.ReLU()
         self.fc2 = nn.Linear(128, 5)
+
+        # Quantization steps
+        self.quant = torch.quantization.QuantStub()
+        self.dequant = torch.quantization.DeQuantStub()
 
     def forward(self, x):
         """
@@ -76,19 +86,22 @@ class Model(nn.Module):
         Returns:
             torch.Tensor: Output tensor.
         """
+        x = self.quant(x)  # Quantize the input (no-op if not quantized)
         x = self.conv1(x)
-        x = F.relu(x)
+        x = self.relu1(x)
         x = self.pool1(x)
         x = self.conv2(x)
-        x = F.relu(x)
+        x = self.relu2(x)
         x = self.pool2(x)
 
         x = torch.flatten(x, start_dim=1)
         x = self.fc1(x)
-        x = F.relu(x)
+        x = self.relu3(x)
         x = self.fc2(x)
+        x = self.dequant(x)  # Dequantize the output (no-op if not quantized)
 
         return x
+
 
 class RecurrentModel(nn.Module):
     """
@@ -394,3 +407,23 @@ def plot_history(history, best_epoch):
 #     cm = confusion_matrix(all_targets, all_predictions)
 #
 #     return cm
+
+def quantize_model(model):
+    """
+    Quantizes the given model using static quantization.
+
+    Args:
+        model (torch.nn.Module): The neural network model to be quantized.
+
+    Returns:
+        torch.nn.Module: The quantized model.
+    """
+    model.eval()
+    model.qconfig = torch.ao.quantization.get_default_qconfig('fbgemm')
+    model_fused = torch.quantization.fuse_modules(model, [['conv1', 'relu1'], ['conv2', 'relu2']])
+    model_prepared = torch.ao.quantization.prepare(model_fused, inplace=True)
+    for _ in range(100):
+        input_tensor = torch.randn(1, 3, 96, 96)
+        model_prepared(input_tensor)
+    model = torch.ao.quantization.convert(model_prepared)
+    return model
